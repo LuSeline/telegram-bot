@@ -1,5 +1,5 @@
 services:
-  - type: worker  # <-- ВАЖНО: не web, а worker
+  - type: worker  # <-- ВАЖНО!
     name: telegram-notion-bot
     env: python
     region: oregon
