@@ -4,6 +4,7 @@ services:
     env: python
     region: oregon
     plan: free
+    runtime: python
     buildCommand: pip install --no-cache-dir -r requirements.txt
     startCommand: python telegram_notion_bot.py
     envVars:
