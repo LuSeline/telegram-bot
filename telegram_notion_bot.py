@@ -5,8 +5,6 @@ from datetime import datetime
 import requests
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-
-# Добавим Flask для HTTP-сервера
 from flask import Flask
 import threading
 
@@ -140,37 +138,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик ошибок"""
     logger.error(f"Ошибка: {context.error}")
 
-def main():
-    """Основная функция запуска бота"""
-    if not TELEGRAM_BOT_TOKEN:
-        logger.error("TELEGRAM_BOT_TOKEN не найден!")
-        return
-    
-    if not NOTION_TOKEN:
-        logger.error("NOTION_TOKEN не найден!")
-        return
-        
-    if not DATABASE_ID:
-        logger.error("DATABASE_ID не найден!")
-        return
-    
-    # Создаем приложение
-    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-    
-    # Добавляем обработчики
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    application.add_error_handler(error_handler)
-    
-    logger.info("🚀 Бот запущен на Render")
-    
-    # Запускаем polling
-    application.run_polling(
-        drop_pending_updates=True,
-        allowed_updates=Update.ALL_TYPES
-    )
-
-# Создаем Flask-приложение для health check
+# Flask-приложение для health check
 app = Flask(__name__)
 
 @app.route('/')
@@ -188,17 +156,30 @@ def run_flask():
 
 def main():
     """Основная функция запуска бота"""
-    # ... ваша проверка переменных ...
+    if not TELEGRAM_BOT_TOKEN:
+        logger.error("TELEGRAM_BOT_TOKEN не найден!")
+        return
+    
+    if not NOTION_TOKEN:
+        logger.error("NOTION_TOKEN не найден!")
+        return
+        
+    if not DATABASE_ID:
+        logger.error("DATABASE_ID не найден!")
+        return
     
     # Запускаем Flask в отдельном потоке
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.daemon = True
     flask_thread.start()
     
-    # Создаем и запускаем Telegram-бота
+    # Создаем приложение
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     
-    # ... добавление обработчиков ...
+    # Добавляем обработчики
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    application.add_error_handler(error_handler)
     
     logger.info("🚀 Бот и HTTP-сервер запущены на Render")
     
