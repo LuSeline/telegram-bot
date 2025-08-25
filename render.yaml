@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: telegram-notion-bot
+    env: python
+    startCommand: "python telegram_notion_bot.py"
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: NOTION_TOKEN
+        sync: false
+      - key: DATABASE_ID
+        sync: false
