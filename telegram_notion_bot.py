@@ -6,6 +6,10 @@ import requests
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
+# Добавим Flask для HTTP-сервера
+from flask import Flask
+import threading
+
 # Получаем переменные из окружения
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 NOTION_TOKEN = os.environ.get('NOTION_TOKEN')
@@ -159,6 +163,44 @@ def main():
     application.add_error_handler(error_handler)
     
     logger.info("🚀 Бот запущен на Render")
+    
+    # Запускаем polling
+    application.run_polling(
+        drop_pending_updates=True,
+        allowed_updates=Update.ALL_TYPES
+    )
+
+# Создаем Flask-приложение для health check
+app = Flask(__name__)
+
+@app.route('/')
+def health_check():
+    return {"status": "ok", "service": "telegram-notion-bot"}
+
+@app.route('/health')
+def health():
+    return {"status": "healthy"}
+
+def run_flask():
+    """Запуск Flask в отдельном потоке"""
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
+
+def main():
+    """Основная функция запуска бота"""
+    # ... ваша проверка переменных ...
+    
+    # Запускаем Flask в отдельном потоке
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.daemon = True
+    flask_thread.start()
+    
+    # Создаем и запускаем Telegram-бота
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    
+    # ... добавление обработчиков ...
+    
+    logger.info("🚀 Бот и HTTP-сервер запущены на Render")
     
     # Запускаем polling
     application.run_polling(
