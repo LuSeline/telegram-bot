@@ -155,9 +155,7 @@ def run_flask():
     app.run(host='0.0.0.0', port=port)
 
 def main():
-    while True:
-        try:
-            """Основная функция запуска бота"""
+    """Основная функция запущенного бота"""
     if not TELEGRAM_BOT_TOKEN:
         logger.error("TELEGRAM_BOT_TOKEN не найден!")
         return
@@ -175,25 +173,27 @@ def main():
     flask_thread.daemon = True
     flask_thread.start()
     
-    # Создаем приложение
-    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-    
-    # Добавляем обработчики
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    application.add_error_handler(error_handler)
-    
-    logger.info("🚀 Бот и HTTP-сервер запущены на Render")
-    
-    # Запускаем polling
-    application.run_polling(
-        drop_pending_updates=True,
-        allowed_updates=Update.ALL_TYPES
-    )
+    while True:
+        try:
+            # Создаем приложение
+            application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+            
+            # Добавляем обработчики
+            application.add_handler(CommandHandler("start", start))
+            application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+            application.add_error_handler(error_handler)
+            
+            logger.info("🚀 Бот и HTTP-сервер запущены на Render")
+            
+            # Запускаем polling
+            application.run_polling(
+                drop_pending_updates=True,
+                allowed_updates=Update.ALL_TYPES
+            )
 
-    except Exception as e:
-        logger.error(f"Бот упал: {e}")
-        time.sleep(5)  # Подождём 5 секунд перед перезапуском
+        except Exception as e:
+            logger.error(f"Бот упал: {e}")
+            time.sleep(5)  # Подождём 5 секунд перед перезапуском
    
 
 if __name__ == "__main__":
