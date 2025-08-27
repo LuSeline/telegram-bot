@@ -1,15 +1,13 @@
 services:
-  - type: web  # <-- ВАЖНО!
+  - type: web
     name: telegram-notion-bot
     env: python
-    region: oregon
-    plan: free
-    buildCommand: pip install --no-cache-dir -r requirements.txt
+    buildCommand: pip install -r requirements.txt
     startCommand: python telegram_notion_bot.py
     envVars:
       - key: TELEGRAM_BOT_TOKEN
         sync: false
-      - key: NOTION_TOKEN  
+      - key: NOTION_TOKEN
         sync: false
       - key: DATABASE_ID
         sync: false
