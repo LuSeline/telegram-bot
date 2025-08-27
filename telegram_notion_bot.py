@@ -1,6 +1,7 @@
 import os
 import logging
 import asyncio
+import time  # Добавьте эту строку
 from datetime import datetime
 import requests
 from telegram import Update
