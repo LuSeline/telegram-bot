@@ -155,7 +155,9 @@ def run_flask():
     app.run(host='0.0.0.0', port=port)
 
 def main():
-    """Основная функция запуска бота"""
+    while True:
+        try:
+            """Основная функция запуска бота"""
     if not TELEGRAM_BOT_TOKEN:
         logger.error("TELEGRAM_BOT_TOKEN не найден!")
         return
@@ -188,6 +190,11 @@ def main():
         drop_pending_updates=True,
         allowed_updates=Update.ALL_TYPES
     )
+
+    except Exception as e:
+        logger.error(f"Бот упал: {e}")
+        time.sleep(5)  # Подождём 5 секунд перед перезапуском
+   
 
 if __name__ == "__main__":
     main()
