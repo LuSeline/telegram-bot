@@ -167,7 +167,7 @@ def health():
 def webhook():
     if application:
         update = Update.de_json(request.get_json(), application.bot)
-        # Исправлено: используем asyncio для обработки асинхронных функций
+        # Используем asyncio для асинхронных обработчиков
         asyncio.run(application.process_update(update))
     return 'OK'
 
