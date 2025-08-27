@@ -30,8 +30,8 @@ class NotionAPI:
             "Notion-Version": "2022-06-28"
         }
     
-    def create_task(self, title, notes="", source="Telegram", category="Личное"):
-        url = "https://api.notion.com/v1/pages"
+   def create_task(self, title, notes="", source="Telegram", category="Личное"):
+    url = "https://api.notion.com/v1/pages"  # Уберите лишние пробелы
         
         data = {
             "parent": {"database_id": DATABASE_ID},
