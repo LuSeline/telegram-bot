@@ -1,6 +1,7 @@
 import os
 import logging
 import time
+import asyncio
 from datetime import datetime
 import requests
 from telegram import Update
@@ -29,11 +30,17 @@ class NotionAPI:
             "Notion-Version": "2022-06-28"
         }
     
-    def create_task(self, title, notes="", source="Telegram", category="Личное"):
-        url = "https://api.notion.com/v1/pages"
+    def create_task(self, title, notes="", source="Telegram", category="Личное", database_id=None):
+        # Используем переданный database_id или глобальный
+        db_id = database_id or DATABASE_ID
+        if not db_id:
+            logger.error("DATABASE_ID не указан")
+            return None
+            
+        url = "https://api.notion.com/v1/pages"  # Исправлено: убраны пробелы
         
         data = {
-            "parent": {"database_id": DATABASE_ID},
+            "parent": {"database_id": db_id},
             "properties": {
                 "Задача": {
                     "title": [{"text": {"content": title}}]
@@ -110,12 +117,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         processing_msg = await update.message.reply_text("⏳ Добавляю задачу...")
         
         # Создаем задачу в Notion
-        if notion:
+        if notion and DATABASE_ID:
             result = notion.create_task(
                 title=title, 
                 notes=notes, 
                 category=category,
-                source="Telegram"
+                source="Telegram",
+                database_id=DATABASE_ID
             )
         else:
             result = None
@@ -159,7 +167,8 @@ def health():
 def webhook():
     if application:
         update = Update.de_json(request.get_json(), application.bot)
-        application.process_update(update)
+        # Исправлено: используем asyncio для обработки асинхронных функций
+        asyncio.run(application.process_update(update))
     return 'OK'
 
 def run_flask():
