@@ -1,12 +1,11 @@
 import os
 import logging
-import asyncio
-import time  # Добавьте эту строку
+import time
 from datetime import datetime
 import requests
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from flask import Flask
+from flask import Flask, request
 import threading
 
 # Получаем переменные из окружения
@@ -30,8 +29,8 @@ class NotionAPI:
             "Notion-Version": "2022-06-28"
         }
     
-   def create_task(self, title, notes="", source="Telegram", category="Личное"):
-    url = "https://api.notion.com/v1/pages"  # Уберите лишние пробелы
+    def create_task(self, title, notes="", source="Telegram", category="Личное"):
+        url = "https://api.notion.com/v1/pages"
         
         data = {
             "parent": {"database_id": DATABASE_ID},
@@ -63,7 +62,7 @@ class NotionAPI:
             return None
 
 # Инициализация
-notion = NotionAPI(NOTION_TOKEN)
+notion = NotionAPI(NOTION_TOKEN) if NOTION_TOKEN else None
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Команда /start"""
@@ -111,12 +110,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         processing_msg = await update.message.reply_text("⏳ Добавляю задачу...")
         
         # Создаем задачу в Notion
-        result = notion.create_task(
-            title=title, 
-            notes=notes, 
-            category=category,
-            source="Telegram"
-        )
+        if notion:
+            result = notion.create_task(
+                title=title, 
+                notes=notes, 
+                category=category,
+                source="Telegram"
+            )
+        else:
+            result = None
         
         if result:
             await processing_msg.edit_text(
@@ -139,8 +141,11 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик ошибок"""
     logger.error(f"Ошибка: {context.error}")
 
-# Flask-приложение для health check
+# Flask-приложение для health check и webhook
 app = Flask(__name__)
+
+# Глобальная переменная для хранения application
+application = None
 
 @app.route('/')
 def health_check():
@@ -150,13 +155,22 @@ def health_check():
 def health():
     return {"status": "healthy"}
 
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    if application:
+        update = Update.de_json(request.get_json(), application.bot)
+        application.process_update(update)
+    return 'OK'
+
 def run_flask():
     """Запуск Flask в отдельном потоке"""
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port)
 
 def main():
-    """Основная функция запущенного бота"""
+    """Основная функция запуска бота"""
+    global application
+    
     if not TELEGRAM_BOT_TOKEN:
         logger.error("TELEGRAM_BOT_TOKEN не найден!")
         return
@@ -169,33 +183,38 @@ def main():
         logger.error("DATABASE_ID не найден!")
         return
     
-    # Запускаем Flask в отдельном потоке
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.daemon = True
-    flask_thread.start()
-    
-    while True:
-        try:
-            # Создаем приложение
-            application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    try:
+        # Создаем приложение
+        application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+        
+        # Добавляем обработчики
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        application.add_error_handler(error_handler)
+        
+        # Запускаем Flask в отдельном потоке
+        flask_thread = threading.Thread(target=run_flask)
+        flask_thread.daemon = True
+        flask_thread.start()
+        
+        # Устанавливаем webhook
+        RENDER_URL = os.environ.get('RENDER_EXTERNAL_URL')
+        if RENDER_URL:
+            webhook_url = f"{RENDER_URL}/webhook"
+            application.bot.set_webhook(url=webhook_url)
+            logger.info(f"✅ Webhook установлен: {webhook_url}")
+        else:
+            logger.error("RENDER_EXTERNAL_URL не найден!")
+            return
             
-            # Добавляем обработчики
-            application.add_handler(CommandHandler("start", start))
-            application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-            application.add_error_handler(error_handler)
+        logger.info("🚀 Бот и HTTP-сервер запущены на Render")
+        
+        # Держим основной поток активным
+        while True:
+            time.sleep(60)
             
-            logger.info("🚀 Бот и HTTP-сервер запущены на Render")
-            
-            # Запускаем polling
-            application.run_polling(
-                drop_pending_updates=True,
-                allowed_updates=Update.ALL_TYPES
-            )
-
-        except Exception as e:
-            logger.error(f"Бот упал: {e}")
-            time.sleep(5)  # Подождём 5 секунд перед перезапуском
-   
+    except Exception as e:
+        logger.error(f"Ошибка запуска бота: {e}")
 
 if __name__ == "__main__":
     main()
