@@ -170,7 +170,7 @@ def run_flask():
 def main():
     """Основная функция запуска бота"""
     global application
-    
+
     if not TELEGRAM_BOT_TOKEN:
         logger.error("TELEGRAM_BOT_TOKEN не найден!")
         return
@@ -182,7 +182,7 @@ def main():
     if not DATABASE_ID:
         logger.error("DATABASE_ID не найден!")
         return
-    
+
     try:
         # Создаем приложение
         application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
@@ -191,12 +191,12 @@ def main():
         application.add_handler(CommandHandler("start", start))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         application.add_error_handler(error_handler)
-        
+
         # Запускаем Flask в отдельном потоке
         flask_thread = threading.Thread(target=run_flask)
         flask_thread.daemon = True
         flask_thread.start()
-        
+
         # Устанавливаем webhook
         RENDER_URL = os.environ.get('RENDER_EXTERNAL_URL')
         if RENDER_URL:
@@ -206,13 +206,13 @@ def main():
         else:
             logger.error("RENDER_EXTERNAL_URL не найден!")
             return
-            
+
         logger.info("🚀 Бот и HTTP-сервер запущены на Render")
-        
+
         # Держим основной поток активным
         while True:
             time.sleep(60)
-            
+
     except Exception as e:
         logger.error(f"Ошибка запуска бота: {e}")
 
